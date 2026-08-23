@@ -34,7 +34,7 @@ export const config = {
   dbPath: path.resolve(serverRoot, env('DB_PATH', 'data/sigmocad.db')),
   uploadDir: path.resolve(serverRoot, env('UPLOAD_DIR', 'uploads')),
   clientDist: path.resolve(serverRoot, env('CLIENT_DIST', '../client/dist')),
-  corsOrigins: env('CORS_ORIGINS', 'http://localhost:5173')
+  corsOrigins: env('CORS_ORIGINS', 'http://localhost:5180')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean),

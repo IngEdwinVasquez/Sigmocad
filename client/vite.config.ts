@@ -10,7 +10,8 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   server: {
-    port: 5173,
+    port: 5180,
+    strictPort: true,
     proxy: {
       '/api': API_TARGET,
       '/uploads': API_TARGET,

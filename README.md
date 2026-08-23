@@ -54,11 +54,11 @@ npm install
 cp server/.env.example server/.env
 #    Edite server/.env: como mínimo cambie JWT_SECRET y ADMIN_PASSWORD
 
-# 3. Desarrollo (API en :4000 y Vite en :5173 con proxy)
+# 3. Desarrollo (API en :4000 y Vite en :5180 con proxy)
 npm run dev
 ```
 
-Abra http://localhost:5173 e inicie sesión con el administrador inicial
+Abra http://localhost:5180 e inicie sesión con el administrador inicial
 (`ADMIN_EMAIL` / `ADMIN_PASSWORD` del `.env`; por defecto `admin@sigmocad.com` / `Admin123!`).
 El usuario y una empresa de ejemplo (`SEED_COMPANY_NAME`) solo se crean la primera vez, cuando la base de datos está vacía.
 
@@ -94,7 +94,7 @@ Toda la información vive en dos carpetas: `server/data/` (base de datos SQLite)
 |----------|-------------|-------------|
 | `PORT` | Puerto del servidor | `4000` |
 | `PUBLIC_URL` | URL pública del servidor | `http://localhost:4000` |
-| `CORS_ORIGINS` | Orígenes permitidos (coma) | `http://localhost:5173` |
+| `CORS_ORIGINS` | Orígenes permitidos (coma) | `http://localhost:5180` |
 | `JWT_SECRET` | Secreto para firmar sesiones (**obligatorio en producción**) | — |
 | `JWT_EXPIRES_IN` | Duración de la sesión | `7d` |
 | `ALLOW_PUBLIC_REGISTRATION` | Permitir `/register` público | `false` |
