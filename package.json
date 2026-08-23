@@ -12,7 +12,8 @@
     "build": "npm run build -w client && npm run build -w server",
     "start": "npm run start -w server",
     "typecheck": "npm run typecheck -w client && npm run typecheck -w server",
-    "lint": "npm run lint -w client"
+    "lint": "npm run lint -w client",
+    "seed:demo": "npm run seed:demo -w server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

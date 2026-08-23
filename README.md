@@ -163,6 +163,7 @@ Todas las rutas `/api/*` (salvo `auth/login`, `auth/config`, `public/*` y `rss-w
 | `npm run dev` | Servidor (tsx watch) + cliente (Vite) en paralelo |
 | `npm run build` | Compila cliente y servidor |
 | `npm start` | Arranca el servidor compilado |
+| `npm run seed:demo` | Inserta datos de demostración (medios, campañas, métricas, noticias, usuarios `demo1234`) en la primera empresa |
 | `npm run typecheck` | Verificación de tipos en ambos paquetes |
 | `npm run lint` | ESLint del cliente |
 
