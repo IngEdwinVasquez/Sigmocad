@@ -1,0 +1,247 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { MonitorPlay, Grid3x3, Image, Link2, TrendingUp, Activity } from 'lucide-react';
+
+interface Stats {
+  mediaCount: number;
+  slotsCount: number;
+  creativesCount: number;
+  assignmentsCount: number;
+  impressionsToday: number;
+  clicksToday: number;
+}
+
+interface DashboardProps {
+  onNavigate?: (page: string) => void;
+}
+
+export function Dashboard({ onNavigate }: DashboardProps = {}) {
+  const [stats, setStats] = useState<Stats>({
+    mediaCount: 0,
+    slotsCount: 0,
+    creativesCount: 0,
+    assignmentsCount: 0,
+    impressionsToday: 0,
+    clicksToday: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    setLoading(true);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString();
+
+    const [mediaRes, slotsRes, creativesRes, assignmentsRes, impressionsRes, clicksRes] = await Promise.all([
+      supabase.from('media').select('id', { count: 'exact', head: true }),
+      supabase.from('slots').select('id', { count: 'exact', head: true }),
+      supabase.from('creatives').select('id', { count: 'exact', head: true }),
+      supabase.from('assignments').select('id', { count: 'exact', head: true }),
+      supabase.from('metrics').select('id', { count: 'exact', head: true }).eq('type', 'IMPRESSION').gte('created_at', todayStr),
+      supabase.from('metrics').select('id', { count: 'exact', head: true }).eq('type', 'CLICK').gte('created_at', todayStr),
+    ]);
+
+    setStats({
+      mediaCount: mediaRes.count || 0,
+      slotsCount: slotsRes.count || 0,
+      creativesCount: creativesRes.count || 0,
+      assignmentsCount: assignmentsRes.count || 0,
+      impressionsToday: impressionsRes.count || 0,
+      clicksToday: clicksRes.count || 0,
+    });
+
+    setLoading(false);
+  };
+
+  const handleCardClick = (page: string) => {
+    if (onNavigate) {
+      onNavigate(page);
+    }
+  };
+
+  if (loading) {
+    return <div className="text-center py-8">Cargando...</div>;
+  }
+
+  const ctr = stats.impressionsToday > 0 ? (stats.clicksToday / stats.impressionsToday) * 100 : 0;
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <button
+          onClick={() => handleCardClick('media')}
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Media</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.mediaCount}</p>
+              <p className="text-xs text-gray-500 mt-1">Click to manage</p>
+            </div>
+            <div className="bg-blue-100 p-3 rounded-lg">
+              <MonitorPlay className="w-8 h-8 text-blue-600" />
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => handleCardClick('slots')}
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-green-500"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Slots</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.slotsCount}</p>
+              <p className="text-xs text-gray-500 mt-1">Click to manage</p>
+            </div>
+            <div className="bg-green-100 p-3 rounded-lg">
+              <Grid3x3 className="w-8 h-8 text-green-600" />
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => handleCardClick('creatives')}
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-purple-500"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Creatives</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.creativesCount}</p>
+              <p className="text-xs text-gray-500 mt-1">Click to manage</p>
+            </div>
+            <div className="bg-purple-100 p-3 rounded-lg">
+              <Image className="w-8 h-8 text-purple-600" />
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => handleCardClick('assignments')}
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-orange-500"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Assignments</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.assignmentsCount}</p>
+              <p className="text-xs text-gray-500 mt-1">Click to manage</p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <Link2 className="w-8 h-8 text-orange-600" />
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => handleCardClick('metrics')}
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Impressions Today</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.impressionsToday.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">Click to view metrics</p>
+            </div>
+            <div className="bg-indigo-100 p-3 rounded-lg">
+              <Activity className="w-8 h-8 text-indigo-600" />
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => handleCardClick('metrics')}
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-pink-500"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">CTR Today</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{ctr.toFixed(2)}%</p>
+              <p className="text-xs text-gray-500 mt-1">Click to view metrics</p>
+            </div>
+            <div className="bg-pink-100 p-3 rounded-lg">
+              <TrendingUp className="w-8 h-8 text-pink-600" />
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg p-8 text-white">
+        <h2 className="text-2xl font-bold mb-2">Welcome to SIGMOCAD</h2>
+        <p className="text-blue-100 mb-4">
+          Your comprehensive ad serving platform with advanced campaign management and analytics.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="bg-white bg-opacity-20 rounded-lg p-4">
+            <h3 className="font-semibold mb-1">Clicks Today</h3>
+            <p className="text-2xl font-bold">{stats.clicksToday.toLocaleString()}</p>
+          </div>
+          <div className="bg-white bg-opacity-20 rounded-lg p-4">
+            <h3 className="font-semibold mb-1">Active Assignments</h3>
+            <p className="text-2xl font-bold">{stats.assignmentsCount}</p>
+          </div>
+          <div className="bg-white bg-opacity-20 rounded-lg p-4">
+            <h3 className="font-semibold mb-1">Total Assets</h3>
+            <p className="text-2xl font-bold">
+              {stats.mediaCount + stats.slotsCount + stats.creativesCount}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+          <div className="space-y-2">
+            <button
+              onClick={() => handleCardClick('media')}
+              className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <span className="text-sm font-medium text-gray-700">Add New Media</span>
+            </button>
+            <button
+              onClick={() => handleCardClick('creatives')}
+              className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <span className="text-sm font-medium text-gray-700">Upload Creative</span>
+            </button>
+            <button
+              onClick={() => handleCardClick('assignments')}
+              className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-orange-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <span className="text-sm font-medium text-gray-700">Create Assignment</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">System Status</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">System Health</span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Operational
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Active Media</span>
+              <span className="text-sm font-medium text-gray-900">{stats.mediaCount}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Delivery Status</span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                Active
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

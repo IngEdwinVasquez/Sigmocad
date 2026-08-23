@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-slate-200;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-slate-200/60 transition-all duration-200;
+  }
+
+  .card:hover {
+    @apply shadow-md border-slate-300/60;
+  }
+
+  .btn-primary {
+    @apply bg-slate-900 text-white hover:bg-slate-800 focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400 transition-all duration-200;
+  }
+
+  .input-field {
+    @apply border-slate-300 focus:border-slate-500 focus:ring-slate-500 rounded-lg transition-all duration-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20;
+  }
+
+  .badge-warning {
+    @apply bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20;
+  }
+
+  .badge-error {
+    @apply bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20;
+  }
+
+  .badge-info {
+    @apply bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20;
+  }
+
+  .stat-card {
+    @apply bg-gradient-to-br from-white to-slate-50 rounded-xl p-6 border border-slate-200/60 shadow-sm hover:shadow-md transition-all duration-300;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
