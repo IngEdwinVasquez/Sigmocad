@@ -35,14 +35,11 @@ export function Register() {
         <div className="max-w-md w-full relative">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center mb-6">
-              <img src="/indotel-logo.png" alt="INDOTEL" className="h-20 w-auto" />
+              <img src="/sigmocadlogo.png" alt="SIGMOCAD" className="h-24 w-auto bg-white rounded-xl p-3" />
             </div>
             <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">SIGMOCAD</h1>
             <p className="text-slate-400 text-sm font-medium">
               Sistema de Gestión de Medios y Campañas
-            </p>
-            <p className="text-slate-300 text-xs mt-2 font-semibold">
-              Instituto Dominicano de las Telecomunicaciones
             </p>
           </div>
 
@@ -84,14 +81,11 @@ export function Register() {
       <div className="max-w-md w-full relative">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-6">
-            <img src="/indotel-logo.png" alt="INDOTEL" className="h-20 w-auto" />
+            <img src="/sigmocadlogo.png" alt="SIGMOCAD" className="h-24 w-auto bg-white rounded-xl p-3" />
           </div>
           <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Registro</h1>
           <p className="text-slate-400 text-sm font-medium">
             Crear nueva cuenta en SIGMOCAD
-          </p>
-          <p className="text-slate-300 text-xs mt-2 font-semibold">
-            Instituto Dominicano de las Telecomunicaciones
           </p>
         </div>
 

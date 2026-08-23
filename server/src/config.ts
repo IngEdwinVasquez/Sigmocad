@@ -45,6 +45,8 @@ export const config = {
     password: env('ADMIN_PASSWORD', 'Admin123!'),
     fullName: env('ADMIN_NAME', 'Administrador'),
   },
+  /** Example institution created with the first admin (empty name = none). */
+  seedCompanyName: process.env.SEED_COMPANY_NAME ?? 'Institución de Ejemplo',
   smtp: {
     host: process.env.SMTP_HOST || '',
     port: Number(process.env.SMTP_PORT || 465),

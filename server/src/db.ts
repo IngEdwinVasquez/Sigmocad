@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import bcrypt from 'bcryptjs';
 import { config } from './config.js';
-import { uuid, nowIso } from './utils.js';
+import { uuid, nowIso, slugify } from './utils.js';
 
 fs.mkdirSync(path.dirname(config.dbPath), { recursive: true });
 
@@ -273,6 +273,15 @@ function seedAdmin() {
 
   console.log('--------------------------------------------------------------');
   console.log(`Usuario administrador inicial creado: ${email}`);
+
+  const companyName = config.seedCompanyName.trim();
+  const hasCompanies = (db.prepare('SELECT COUNT(*) AS c FROM companies').get() as { c: number }).c > 0;
+  if (companyName && !hasCompanies) {
+    db.prepare(
+      `INSERT INTO companies (id, name, slug, status, created_at, updated_at) VALUES (?, ?, ?, 'ACTIVE', ?, ?)`
+    ).run(uuid(), companyName, slugify(companyName) || 'ejemplo', now, now);
+    console.log(`Empresa de ejemplo creada: ${companyName}`);
+  }
   if (password === 'Admin123!') {
     console.log('ATENCIÓN: contraseña por defecto "Admin123!". Cámbiela al iniciar sesión.');
   }

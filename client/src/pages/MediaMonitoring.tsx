@@ -625,7 +625,7 @@ export function MediaMonitoring() {
         <form onSubmit={handleAddKeyword} className="space-y-4">
           <Input
             label="Palabra o Frase Clave"
-            placeholder='Ejemplo: DIDA, "Dirección General de Información"'
+            placeholder='Ejemplo: Ministerio de Ejemplo, "Instituto Nacional de Ejemplo"'
             value={newKeyword}
             onChange={(e) => setNewKeyword(e.target.value)}
             required

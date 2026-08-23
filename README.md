@@ -60,7 +60,7 @@ npm run dev
 
 Abra http://localhost:5173 e inicie sesión con el administrador inicial
 (`ADMIN_EMAIL` / `ADMIN_PASSWORD` del `.env`; por defecto `admin@sigmocad.com` / `Admin123!`).
-El usuario solo se crea la primera vez, cuando la base de datos está vacía.
+El usuario y una empresa de ejemplo (`SEED_COMPANY_NAME`) solo se crean la primera vez, cuando la base de datos está vacía.
 
 ### Producción
 
@@ -99,6 +99,7 @@ Toda la información vive en dos carpetas: `server/data/` (base de datos SQLite)
 | `JWT_EXPIRES_IN` | Duración de la sesión | `7d` |
 | `ALLOW_PUBLIC_REGISTRATION` | Permitir `/register` público | `false` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | Administrador inicial | `admin@sigmocad.com` / `Admin123!` |
+| `SEED_COMPANY_NAME` | Empresa de ejemplo creada en el primer arranque | `Institución de Ejemplo` |
 | `DB_PATH` | Ruta del archivo SQLite | `data/sigmocad.db` |
 | `UPLOAD_DIR` | Carpeta de archivos subidos | `uploads` |
 | `MAX_UPLOAD_MB` | Tamaño máximo por archivo | `50` |
@@ -164,15 +165,6 @@ Todas las rutas `/api/*` (salvo `auth/login`, `auth/config`, `public/*` y `rss-w
 | `npm start` | Arranca el servidor compilado |
 | `npm run typecheck` | Verificación de tipos en ambos paquetes |
 | `npm run lint` | ESLint del cliente |
-
-## Migración desde la versión Supabase
-
-La versión anterior usaba Supabase (Postgres, Auth, Storage y Edge Functions). Esta versión reemplaza
-cada pieza por un equivalente local; el esquema de datos se conserva (tablas `companies`, `users`,
-`media`, `slots`, `creatives`, `assignments`, `metrics`, `news`, `news_verification`, `news_submissions`,
-`email_history`, `traditional_media`, `monitoring_keywords`, `monitored_articles`) más `rss_feeds`.
-Los datos existentes en Supabase deben exportarse e importarse manualmente en SQLite si se desean conservar;
-las contraseñas de Supabase Auth no son transferibles, por lo que los usuarios deben recrearse.
 
 ## Licencia
 
