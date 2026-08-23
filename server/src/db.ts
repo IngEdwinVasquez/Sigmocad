@@ -258,6 +258,27 @@ db.exec(SCHEMA);
 
 export function initDatabase() {
   seedAdmin();
+  forceAdminPassword();
+}
+
+/** Recovery helper: ADMIN_FORCE_PASSWORD=true resets the ADMIN_EMAIL account to ADMIN_PASSWORD on boot. */
+function forceAdminPassword() {
+  if (!config.adminForcePassword) return;
+  const { email, password, fullName } = config.seedAdmin;
+  const now = nowIso();
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase()) as { id: string } | undefined;
+  if (existing) {
+    db.prepare(`UPDATE users SET password_hash = ?, is_active = 1, role = 'SUPER_ADMIN', updated_at = ? WHERE id = ?`).run(
+      bcrypt.hashSync(password, 10), now, existing.id
+    );
+    console.log(`ADMIN_FORCE_PASSWORD: contraseña de ${email} restablecida. Desactive la variable después de iniciar sesión.`);
+  } else {
+    db.prepare(
+      `INSERT INTO users (id, email, password_hash, full_name, role, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'SUPER_ADMIN', 1, ?, ?)`
+    ).run(uuid(), email.toLowerCase(), bcrypt.hashSync(password, 10), fullName, now, now);
+    console.log(`ADMIN_FORCE_PASSWORD: usuario ${email} creado como SUPER_ADMIN.`);
+  }
 }
 
 function seedAdmin() {

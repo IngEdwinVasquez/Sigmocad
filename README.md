@@ -121,6 +121,7 @@ Toda la información vive en dos carpetas: `server/data/` (base de datos SQLite)
 | `JWT_EXPIRES_IN` | Duración de la sesión | `7d` |
 | `ALLOW_PUBLIC_REGISTRATION` | Permitir `/register` público | `false` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | Administrador inicial | `admin@sigmocad.com` / `Admin123!` |
+| `ADMIN_FORCE_PASSWORD` | `true` restablece la contraseña de `ADMIN_EMAIL` a `ADMIN_PASSWORD` en cada arranque (recuperación; volver a `false`) | `false` |
 | `SEED_COMPANY_NAME` | Empresa de ejemplo creada en el primer arranque | `Institución de Ejemplo` |
 | `DB_PATH` | Ruta del archivo SQLite | `data/sigmocad.db` |
 | `SQLITE_JOURNAL_MODE` | `WAL` (disco local) o `DELETE` (disco de red, Azure App Service) | `WAL` |
