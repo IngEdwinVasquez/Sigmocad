@@ -83,6 +83,28 @@ Para mantener el proceso en ejecución use pm2, systemd o el Programador de tare
 npx pm2 start server/dist/index.js --name sigmocad
 ```
 
+### Despliegue en Azure App Service (Linux)
+
+1. Crear **Aplicación web** → Publicar: *Código*, pila *Node 22 LTS*, SO *Linux*, plan F1 (pruebas) o B1 (producción).
+2. *Centro de implementación* → GitHub → repositorio y rama `main`. Azure ejecuta `npm install`, `npm run build` y `npm start`.
+3. *Configuración → Variables de entorno*, agregar:
+
+| Nombre | Valor |
+|--------|-------|
+| `NODE_ENV` | `production` |
+| `PUBLIC_URL` | `https://<nombre-app>.azurewebsites.net` (o su dominio) |
+| `CORS_ORIGINS` | el mismo valor de `PUBLIC_URL` |
+| `JWT_SECRET` | cadena aleatoria larga |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | credenciales del primer administrador |
+| `DB_PATH` | `/home/data/sigmocad.db` |
+| `UPLOAD_DIR` | `/home/uploads` |
+| `SQLITE_JOURNAL_MODE` | `DELETE` (el disco `/home` es un recurso compartido de red) |
+| `SMTP_*` | credenciales de correo |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` |
+
+`/home` persiste entre reinicios y despliegues, por lo que la base de datos y los archivos se conservan.
+En el plan F1 la aplicación se suspende tras 20 minutos sin tráfico; para producción use B1 con *Always On*.
+
 ### Copias de seguridad
 
 Toda la información vive en dos carpetas: `server/data/` (base de datos SQLite) y
@@ -101,6 +123,7 @@ Toda la información vive en dos carpetas: `server/data/` (base de datos SQLite)
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | Administrador inicial | `admin@sigmocad.com` / `Admin123!` |
 | `SEED_COMPANY_NAME` | Empresa de ejemplo creada en el primer arranque | `Institución de Ejemplo` |
 | `DB_PATH` | Ruta del archivo SQLite | `data/sigmocad.db` |
+| `SQLITE_JOURNAL_MODE` | `WAL` (disco local) o `DELETE` (disco de red, Azure App Service) | `WAL` |
 | `UPLOAD_DIR` | Carpeta de archivos subidos | `uploads` |
 | `MAX_UPLOAD_MB` | Tamaño máximo por archivo | `50` |
 | `CLIENT_DIST` | Build del cliente a servir | `../client/dist` |

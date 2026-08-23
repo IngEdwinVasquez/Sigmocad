@@ -32,6 +32,8 @@ export const config = {
   jwtSecret: env('JWT_SECRET', isProduction ? '' : 'dev-secret-change-me'),
   jwtExpiresIn: env('JWT_EXPIRES_IN', '7d'),
   dbPath: path.resolve(serverRoot, env('DB_PATH', 'data/sigmocad.db')),
+  /** WAL is fastest on local disks; use DELETE on network shares (e.g. Azure App Service /home). */
+  sqliteJournalMode: env('SQLITE_JOURNAL_MODE', 'WAL').toUpperCase(),
   uploadDir: path.resolve(serverRoot, env('UPLOAD_DIR', 'uploads')),
   clientDist: path.resolve(serverRoot, env('CLIENT_DIST', '../client/dist')),
   corsOrigins: env('CORS_ORIGINS', 'http://localhost:5180')

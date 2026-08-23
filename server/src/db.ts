@@ -8,7 +8,7 @@ import { uuid, nowIso, slugify } from './utils.js';
 fs.mkdirSync(path.dirname(config.dbPath), { recursive: true });
 
 export const db = new Database(config.dbPath);
-db.pragma('journal_mode = WAL');
+db.pragma(`journal_mode = ${['WAL', 'DELETE', 'TRUNCATE', 'PERSIST', 'MEMORY'].includes(config.sqliteJournalMode) ? config.sqliteJournalMode : 'WAL'}`);
 db.pragma('foreign_keys = ON');
 db.pragma('busy_timeout = 5000');
 
