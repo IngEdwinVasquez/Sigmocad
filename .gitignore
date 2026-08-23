@@ -11,6 +11,12 @@ dist-ssr/
 .env.*
 !.env.example
 
+# SQLite database and uploaded files
+server/data/*.db
+server/data/*.db-*
+server/uploads/*
+!server/uploads/.gitkeep
+
 # Vite temp files
 vite.config.ts.timestamp-*.mjs
 
@@ -33,7 +39,4 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
-
-# Supabase local
-supabase/.branches/
-supabase/.temp/
+!server/data/.gitkeep

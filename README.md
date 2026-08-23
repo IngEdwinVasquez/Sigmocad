@@ -1,273 +1,179 @@
-# Ad Server Platform
+# SIGMOCAD
 
-A full-stack ad server application built with React, TypeScript, Vite, Tailwind CSS, and Supabase. Manage publishers, ad slots, creatives, and track metrics with real-time delivery.
+**Sistema de Gestión de Medios y Contenido Publicitario Digital.**
+Plataforma para administrar medios (digitales, TV y radio), espacios publicitarios, campañas, asignaciones, métricas de impresiones/clics, verificación y envío de noticias, y monitoreo de medios por RSS.
 
-## Features
+Versión 2: sin dependencias de servicios externos. Todo corre en un solo proceso Node.
 
-- **Authentication**: Email/password authentication with Supabase Auth
-- **Media Management**: Create and manage publishers/websites with domain restrictions
-- **Slots**: Define ad slots with specific dimensions for each media property
-- **Creatives**: Upload images, GIFs, videos, or HTML creatives with Storage integration
-- **Assignments**: Link creatives to slots with scheduling and weight-based rotation
-- **Metrics**: Track impressions and clicks with dashboard visualization
-- **Snippets**: Auto-generated embed codes (Script and Iframe)
-- **Playground**: Test your snippets in a live preview environment
-- **Edge Functions**: Fast, globally distributed ad delivery via Supabase Edge Functions
+| Capa | Tecnología |
+|------|------------|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, Recharts |
+| Backend | Node.js, Express |
+| Base de datos | SQLite (better-sqlite3) — archivo local, sin servidor |
+| Autenticación | Propia: JWT + bcrypt, roles `SUPER_ADMIN` / `ADMIN` / `USER` |
+| Archivos | Subida local con multer, servidos desde `/uploads` |
+| Correo | SMTP vía nodemailer (opcional) |
+| RSS | Sondeo periódico con rss-parser + webhook externo |
 
-## Tech Stack
+## Estructura del proyecto
 
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
-- **UI Components**: Custom component library with Radix UI patterns
-- **State Management**: React Query (TanStack Query)
-- **Charts**: Recharts
-- **Backend**: Supabase (Postgres, Auth, Storage, Edge Functions)
-- **Validation**: Zod
-
-## Prerequisites
-
-- Node.js 18+ and npm
-- A Supabase account and project
-
-## Getting Started
-
-### 1. Clone the Repository
-
-```bash
-git clone <repository-url>
-cd <project-directory>
+```
+SIGMOCAD/
+├── package.json          # workspaces: client + server, scripts dev/build/start
+├── client/               # Aplicación React (Vite)
+│   ├── src/lib/api.ts    # Cliente HTTP (token JWT + empresa seleccionada)
+│   ├── src/lib/auth-context.tsx
+│   ├── src/pages/        # Dashboard, Medios, Espacios, Campañas, Asignaciones, Métricas,
+│   │                     # Código, Noticias, Monitoreo, Reportes, Correos, Empresas, Usuarios
+│   └── src/components/
+└── server/               # API Express + SQLite
+    ├── .env.example      # Variables de entorno (copiar a .env)
+    ├── data/             # sigmocad.db (se crea automáticamente, ignorado por git)
+    ├── uploads/          # Archivos subidos (ignorado por git)
+    └── src/
+        ├── index.ts      # Arranque, rutas, servido del cliente compilado
+        ├── db.ts         # Esquema SQLite + usuario administrador inicial
+        ├── auth.ts       # JWT, middleware, aislamiento por empresa
+        ├── routes/       # auth, users, companies, media, slots, creatives, assignments,
+        │                 # metrics, news, monitoring, reports, uploads, public (ad server)
+        └── services/     # mailer, geo, newsVerifier, monitoring (RSS)
 ```
 
-### 2. Install Dependencies
+## Requisitos
+
+- Node.js 20 o superior (probado con Node 24)
+- npm 9+
+
+## Instalación y puesta en marcha
 
 ```bash
+# 1. Dependencias de client y server
 npm install
-```
 
-### 3. Set Up Supabase
+# 2. Configuración del servidor
+cp server/.env.example server/.env
+#    Edite server/.env: como mínimo cambie JWT_SECRET y ADMIN_PASSWORD
 
-The database schema and Edge Functions are already deployed. You just need to configure your local environment:
-
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Update `.env` with your Supabase credentials:
-   ```
-   VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-anon-key
-   ```
-
-### 4. Database Setup
-
-The database schema includes:
-- `profiles` - User profiles with roles (ADMIN/EDITOR)
-- `media` - Publishers/websites
-- `slots` - Ad placement slots
-- `creatives` - Ad creative assets
-- `assignments` - Creative-to-slot mappings
-- `metrics` - Impression and click tracking
-
-All tables have Row Level Security (RLS) enabled for data protection.
-
-### 5. Storage Setup
-
-A public `creatives` bucket is configured in Supabase Storage for uploading ad assets.
-
-### 6. Edge Functions
-
-Four Edge Functions are deployed:
-- **embed** - Returns active creative for a given slot
-- **e** (ejs) - Generates the JavaScript embed code
-- **click** - Tracks clicks and redirects to destination URL
-- **impression** - Tracks ad impressions
-
-### 7. Run the Application
-
-Development mode:
-```bash
+# 3. Desarrollo (API en :4000 y Vite en :5173 con proxy)
 npm run dev
 ```
 
-Build for production:
+Abra http://localhost:5173 e inicie sesión con el administrador inicial
+(`ADMIN_EMAIL` / `ADMIN_PASSWORD` del `.env`; por defecto `admin@sigmocad.com` / `Admin123!`).
+El usuario solo se crea la primera vez, cuando la base de datos está vacía.
+
+### Producción
+
 ```bash
-npm run build
+npm run build      # compila client/dist y server/dist
+npm start          # Express sirve la API y la aplicación React en PUBLIC_URL
 ```
 
-Preview production build:
+En producción defina en `server/.env`:
+
+- `NODE_ENV=production`
+- `JWT_SECRET` largo y aleatorio (`openssl rand -hex 32`)
+- `PUBLIC_URL` con la URL pública real (se usa en los snippets, archivos y correos)
+- `CORS_ORIGINS` si el cliente se sirve desde otro dominio
+
+Con un proxy inverso (nginx, Caddy, IIS) apunte al puerto `PORT` (4000 por defecto).
+Para mantener el proceso en ejecución use pm2, systemd o el Programador de tareas de Windows:
+
 ```bash
-npm run preview
+npx pm2 start server/dist/index.js --name sigmocad
 ```
 
-## Usage Guide
+### Copias de seguridad
 
-### 1. Create a Media Property
+Toda la información vive en dos carpetas: `server/data/` (base de datos SQLite) y
+`server/uploads/` (logos, campañas y documentos). Respáldelas juntas.
 
-Go to **Media** and click "Add Media":
-- Enter a name for your publisher/website
-- Optionally add allowed domains (one per line)
-- Set status to Active
-- A unique public key will be generated automatically
+## Variables de entorno (`server/.env`)
 
-### 2. Add Slots
+| Variable | Descripción | Por defecto |
+|----------|-------------|-------------|
+| `PORT` | Puerto del servidor | `4000` |
+| `PUBLIC_URL` | URL pública del servidor | `http://localhost:4000` |
+| `CORS_ORIGINS` | Orígenes permitidos (coma) | `http://localhost:5173` |
+| `JWT_SECRET` | Secreto para firmar sesiones (**obligatorio en producción**) | — |
+| `JWT_EXPIRES_IN` | Duración de la sesión | `7d` |
+| `ALLOW_PUBLIC_REGISTRATION` | Permitir `/register` público | `false` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | Administrador inicial | `admin@sigmocad.com` / `Admin123!` |
+| `DB_PATH` | Ruta del archivo SQLite | `data/sigmocad.db` |
+| `UPLOAD_DIR` | Carpeta de archivos subidos | `uploads` |
+| `MAX_UPLOAD_MB` | Tamaño máximo por archivo | `50` |
+| `CLIENT_DIST` | Build del cliente a servir | `../client/dist` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Envío de correos a medios | (deshabilitado) |
+| `RSS_POLL_MINUTES` | Intervalo de sondeo RSS (0 = apagado) | `15` |
+| `RSS_WEBHOOK_SECRET` | Secreto del webhook `/api/rss-webhook` | (sin secreto) |
+| `GEO_LOOKUP` | Geolocalizar IPs con ip-api.com | `true` |
 
-Go to **Slots** and click "Add Slot":
-- Select the media property
-- Enter a slug (e.g., "home-banner")
-- Set width and height (optional)
-- Set status to Active
+## Usuarios, roles y empresas
 
-### 3. Upload Creatives
+El sistema es multiempresa. Cada registro (medios, campañas, noticias, etc.) pertenece a una empresa.
 
-Go to **Creatives** and click "Add Creative":
-- Select creative type (Image, GIF, Video, or HTML)
-- Upload files or enter URLs
-- Add a click URL (destination when ad is clicked)
-- Set dimensions
+| Rol | Permisos |
+|-----|----------|
+| `SUPER_ADMIN` | Acceso global. Crea empresas, gestiona todos los usuarios y puede cambiar la empresa activa desde la barra lateral ("Viendo datos de"). |
+| `ADMIN` | Gestiona los usuarios y datos de su propia empresa. No puede crear empresas ni otorgar `SUPER_ADMIN`. |
+| `USER` | Opera los módulos de su empresa. |
 
-### 4. Create Assignments
+Mantenimiento de usuarios (menú **Administrador → Usuarios**): crear con contraseña, editar nombre/rol/empresa,
+restablecer contraseña, activar/desactivar y eliminar. Todos los usuarios pueden cambiar su propia contraseña
+desde la barra lateral. No es posible eliminarse, desactivarse ni cambiar el propio rol.
 
-Go to **Assignments** and click "Add Assignment":
-- Select a slot
-- Select a creative
-- Mark as Active
-- Set weight (for rotation)
-- Optionally schedule with start/end dates
+Página de login con marca de la empresa: `http://servidor/?company=<slug>` (el slug se define en **Empresas**).
 
-### 5. Get Embed Code
+## Ad server (endpoints públicos)
 
-Go to **Snippets**:
-- Select your media property and slot
-- Copy the generated snippet (Script or Iframe)
-- Paste into your website HTML
+Los sitios web de los medios integran el código generado en **Código**:
 
-**Script Tag (Recommended):**
 ```html
-<div id="gev-home-banner"></div>
-<script async src="YOUR_SUPABASE_URL/functions/v1/e/YOUR_PUBLIC_KEY.js"
-  data-slot="home-banner" data-width="728" data-height="90"></script>
+<!-- Opción A: iframe -->
+<iframe id="gev-SLOT-0001" width="728" height="90" frameborder="0" scrolling="no"></iframe>
+<script>/* carga PUBLIC_URL/embed?publicKey=...&slot=...&format=html en el iframe */</script>
+
+<!-- Opción B: script -->
+<div id="gev-SLOT-0001"></div>
+<script async src="PUBLIC_URL/e/pk_xxxxxxxx.js" data-slot="SLOT-0001" data-width="728" data-height="90"></script>
 ```
 
-**Iframe Tag:**
-```html
-<iframe
-  src="YOUR_SUPABASE_URL/functions/v1/embed?publicKey=YOUR_PUBLIC_KEY&slot=home-banner"
-  width="728" height="90" frameborder="0" scrolling="no"></iframe>
-```
+| Endpoint | Función |
+|----------|---------|
+| `GET /embed?publicKey=&slot=&format=json\|html` | Devuelve la campaña activa del espacio (rotación por peso, respeta programación y dominios permitidos) |
+| `GET /e/:publicKey.js` | Script de integración que renderiza el anuncio y envía la impresión |
+| `GET /click?mediaId=&slotId=&creativeId=` | Registra el clic y redirige a la URL de destino |
+| `POST /impression` | Registra una impresión (beacon) |
+| `POST /api/rss-webhook` | Recibe artículos `{title, description, link, source, pubDate}` desde servicios externos |
 
-### 6. Test in Playground
+## API interna (resumen)
 
-Go to **Playground** to test your snippets in a safe environment before deploying to production.
+Todas las rutas `/api/*` (salvo `auth/login`, `auth/config`, `public/*` y `rss-webhook`) requieren
+`Authorization: Bearer <token>`. Los `SUPER_ADMIN` pueden enviar `X-Company-Id` para fijar la empresa activa.
 
-### 7. Monitor Metrics
+`/api/auth` · `/api/users` · `/api/companies` · `/api/media` · `/api/slots` · `/api/creatives` ·
+`/api/assignments` · `/api/metrics` · `/api/dashboard` · `/api/traditional-media` · `/api/news` ·
+`/api/monitoring` (keywords, articles, feeds) · `/api/email-history` · `/api/reports` · `/api/uploads` · `/api/tools`
 
-Go to **Metrics** to view:
-- Total impressions and clicks
-- Click-through rate (CTR)
-- Daily performance charts
-- Export data to CSV
+## Scripts
 
-## How It Works
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Servidor (tsx watch) + cliente (Vite) en paralelo |
+| `npm run build` | Compila cliente y servidor |
+| `npm start` | Arranca el servidor compilado |
+| `npm run typecheck` | Verificación de tipos en ambos paquetes |
+| `npm run lint` | ESLint del cliente |
 
-### Ad Delivery Flow
+## Migración desde la versión Supabase
 
-1. Publisher embeds the snippet on their website
-2. The script/iframe calls the Edge Function with media public key and slot slug
-3. Edge Function validates domain restrictions
-4. System finds active assignment for the slot
-5. Creative is selected based on schedule and weight
-6. Ad is rendered on the page
-7. Impression is tracked via beacon
-8. When clicked, user is redirected through click tracker
+La versión anterior usaba Supabase (Postgres, Auth, Storage y Edge Functions). Esta versión reemplaza
+cada pieza por un equivalente local; el esquema de datos se conserva (tablas `companies`, `users`,
+`media`, `slots`, `creatives`, `assignments`, `metrics`, `news`, `news_verification`, `news_submissions`,
+`email_history`, `traditional_media`, `monitoring_keywords`, `monitored_articles`) más `rss_feeds`.
+Los datos existentes en Supabase deben exportarse e importarse manualmente en SQLite si se desean conservar;
+las contraseñas de Supabase Auth no son transferibles, por lo que los usuarios deben recrearse.
 
-### Caching
-
-- Embed API responses are cached for 30 seconds (max-age)
-- Stale-while-revalidate allows serving stale content for up to 5 minutes
-- Changes to assignments reflect within 30-60 seconds
-
-### Security Features
-
-- Row Level Security (RLS) on all database tables
-- Domain validation for embed requests
-- HTML sanitization for HTML creatives
-- Authenticated uploads to Storage
-- Service role key used only in Edge Functions
-
-## API Endpoints
-
-All Edge Functions are available at:
-- `{SUPABASE_URL}/functions/v1/embed` - Get active creative (GET)
-- `{SUPABASE_URL}/functions/v1/e/{publicKey}.js` - Embed script (GET)
-- `{SUPABASE_URL}/functions/v1/click` - Track click and redirect (GET)
-- `{SUPABASE_URL}/functions/v1/impression` - Track impression (POST)
-
-## Development
-
-### Project Structure
-
-```
-src/
-├── components/
-│   ├── ui/              # Reusable UI components
-│   └── Layout.tsx       # Main layout with navigation
-├── lib/
-│   ├── supabase.ts      # Supabase client and types
-│   └── auth-context.tsx # Authentication context
-├── pages/
-│   ├── Auth.tsx         # Login/signup page
-│   ├── Dashboard.tsx    # Overview dashboard
-│   ├── Media.tsx        # Media management
-│   ├── Slots.tsx        # Slots management
-│   ├── Creatives.tsx    # Creative management
-│   ├── Assignments.tsx  # Assignment management
-│   ├── Metrics.tsx      # Analytics dashboard
-│   ├── Snippets.tsx     # Embed code generator
-│   └── Playground.tsx   # Testing environment
-├── App.tsx              # Main app component
-└── main.tsx             # App entry point
-
-supabase/
-└── functions/
-    ├── embed/           # Creative delivery API
-    ├── e/               # JavaScript embed generator
-    ├── click/           # Click tracker
-    └── impression/      # Impression tracker
-```
-
-### Type Checking
-
-```bash
-npm run typecheck
-```
-
-### Linting
-
-```bash
-npm run lint
-```
-
-## Troubleshooting
-
-### Ads not showing up
-- Verify the assignment is marked as Active
-- Check that both Media and Slot status are Active
-- Ensure the creative has a valid src or html content
-- Wait 60 seconds for cache to clear after changes
-
-### Domain restrictions
-- Make sure the embedding domain matches one in the Media's allowed domains
-- Leave domains empty to allow all domains
-
-### Metrics not recording
-- Check browser console for errors
-- Verify Edge Functions are deployed
-- Check network tab for failed requests to impression/click endpoints
-
-## License
+## Licencia
 
 MIT
-
-## Support
-
-For issues and questions, please open a GitHub issue.
