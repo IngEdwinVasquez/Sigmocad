@@ -49,6 +49,8 @@ export const config = {
   },
   /** If true, on every boot the ADMIN_EMAIL user gets ADMIN_PASSWORD (re)applied and is reactivated. */
   adminForcePassword: envBool('ADMIN_FORCE_PASSWORD', false),
+  /** If true, demo data is inserted on boot (idempotent). */
+  seedDemoData: envBool('SEED_DEMO_DATA', false),
   /** Example institution created with the first admin (empty name = none). */
   seedCompanyName: process.env.SEED_COMPANY_NAME ?? 'Institución de Ejemplo',
   smtp: {

@@ -6,6 +6,7 @@ import { config } from './config.js';
 import { initDatabase } from './db.js';
 import { HttpError } from './utils.js';
 import { startRssPoller } from './services/monitoring.js';
+import { seedDemoData } from './seed-demo.js';
 
 import { authRouter } from './routes/auth.js';
 import { usersRouter } from './routes/users.js';
@@ -23,6 +24,13 @@ import { monitoringRouter } from './routes/monitoring.js';
 import { publicRouter, toolsRouter } from './routes/public.js';
 
 initDatabase();
+if (config.seedDemoData) {
+  try {
+    seedDemoData();
+  } catch (err) {
+    console.error('SEED_DEMO_DATA: error insertando datos de demostración', err);
+  }
+}
 
 const app = express();
 app.disable('x-powered-by');

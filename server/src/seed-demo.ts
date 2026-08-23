@@ -1,6 +1,6 @@
 /**
  * Inserta datos de demostración en todas las tablas para probar la aplicación.
- *   npm run seed:demo -w server
+ *   npm run seed:demo -w server        (o SEED_DEMO_DATA=true al arrancar el servidor)
  * Usa la primera empresa existente (o crea "Institución de Ejemplo"). Es idempotente:
  * si ya hay medios de demostración no vuelve a insertarlos.
  */
@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import { db } from './db.js';
 import { uuid, nowIso, generatePublicKey, toJson, slugify } from './utils.js';
 
+export function seedDemoData(log: (msg: string) => void = console.log): boolean {
 const now = nowIso();
 const daysAgo = (d: number, h = 12, m = 0) => {
   const t = new Date();
@@ -31,8 +32,8 @@ db.prepare('UPDATE companies SET website_url = COALESCE(website_url, ?) WHERE id
 const C = company.id;
 
 if ((db.prepare('SELECT COUNT(*) AS c FROM media WHERE company_id = ?').get(C) as { c: number }).c > 0) {
-  console.log(`La empresa "${company.name}" ya tiene datos. Nada que hacer.`);
-  process.exit(0);
+  log(`La empresa "${company.name}" ya tiene datos de demostración. Nada que hacer.`);
+  return false;
 }
 
 const admin = db.prepare(`SELECT id FROM users WHERE role = 'SUPER_ADMIN' ORDER BY created_at LIMIT 1`).get() as { id: string };
@@ -301,7 +302,9 @@ articles.forEach((a, i) =>
   insertArticle.run(uuid(), C, a[0], a[1], `https://www.${slugify(a[2]).replace(/-/g, '')}.com.do/${slugify(a[0]).slice(0, 60)}-${i}`, a[2], daysAgo(a[7], 8), daysAgo(a[7], 8, 30), toJson(a[3]), a[4], a[5], a[6])
 );
 
-console.log(`Datos de demostración insertados para "${company.name}":`);
-console.log(`  usuarios: ${users.length} (contraseña "demo1234") · medios digitales: ${mediaList.length} · TV/Radio: ${trad.length}`);
-console.log(`  espacios: ${slotDefs.length} · campañas: ${creatives.length} · asignaciones: ${assignmentDefs.length} · métricas: ${metricsCount}`);
-console.log(`  noticias: ${newsItems.length} · envíos: ${submissions.length} · palabras clave: 6 · fuentes RSS: 2 · artículos: ${articles.length}`);
+log(`Datos de demostración insertados para "${company.name}":`);
+log(`  usuarios: ${users.length} (contraseña "demo1234") · medios digitales: ${mediaList.length} · TV/Radio: ${trad.length}`);
+log(`  espacios: ${slotDefs.length} · campañas: ${creatives.length} · asignaciones: ${assignmentDefs.length} · métricas: ${metricsCount}`);
+log(`  noticias: ${newsItems.length} · envíos: ${submissions.length} · palabras clave: 6 · fuentes RSS: 2 · artículos: ${articles.length}`);
+return true;
+}

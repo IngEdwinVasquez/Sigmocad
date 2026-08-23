@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "seed:demo": "tsx src/seed-demo.ts"
+    "seed:demo": "tsx src/seed-demo-cli.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
