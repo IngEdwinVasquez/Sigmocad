@@ -6,7 +6,7 @@ name: Build and deploy Node.js app to Azure Web App - sigmocad
 on:
   push:
     branches:
-      - main
+      - produccion
   workflow_dispatch:
 
 jobs:
