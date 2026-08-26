@@ -32,6 +32,7 @@ authRouter.get('/config', (_req, res) => {
     publicUrl: config.publicUrl,
     allowRegistration: config.allowRegistration,
     smtpConfigured: config.smtp.configured,
+    socialMonitoring: { reddit: config.social.redditEnabled, youtube: config.social.youtubeEnabled },
   });
 });
 

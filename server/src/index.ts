@@ -5,7 +5,7 @@ import path from 'node:path';
 import { config } from './config.js';
 import { initDatabase } from './db.js';
 import { HttpError } from './utils.js';
-import { startRssPoller } from './services/monitoring.js';
+import { startRssPoller, startSocialPoller, backfillSentiment } from './services/monitoring.js';
 import { seedDemoData } from './seed-demo.js';
 
 import { authRouter } from './routes/auth.js';
@@ -30,6 +30,12 @@ if (config.seedDemoData) {
   } catch (err) {
     console.error('SEED_DEMO_DATA: error insertando datos de demostración', err);
   }
+}
+try {
+  const backfilled = backfillSentiment();
+  if (backfilled > 0) console.log(`Sentimiento calculado automáticamente para ${backfilled} artículo(s) existentes`);
+} catch (err) {
+  console.error('Error calculando sentimiento retroactivo:', err);
 }
 
 const app = express();
@@ -121,4 +127,5 @@ app.listen(config.port, () => {
   console.log(`Base de datos: ${config.dbPath}`);
   if (!config.smtp.configured) console.log('SMTP no configurado: el envío de correos a medios estará deshabilitado.');
   startRssPoller();
+  startSocialPoller();
 });

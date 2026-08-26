@@ -123,6 +123,7 @@ export interface PublicConfig {
   publicUrl: string;
   allowRegistration: boolean;
   smtpConfigured: boolean;
+  socialMonitoring: { reddit: boolean; youtube: boolean };
 }
 
 let configPromise: Promise<PublicConfig> | null = null;
