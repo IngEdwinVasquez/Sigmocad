@@ -68,6 +68,15 @@ export const config = {
     pollMinutes: Number(env('RSS_POLL_MINUTES', '15')),
     webhookSecret: process.env.RSS_WEBHOOK_SECRET || '',
   },
+  /** Monitoreo de redes sociales usando las palabras clave activas de cada empresa. */
+  social: {
+    redditEnabled: envBool('SOCIAL_REDDIT_ENABLED', true),
+    youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
+    pollMinutes: Number(env('SOCIAL_POLL_MINUTES', '60')),
+    get youtubeEnabled() {
+      return Boolean(this.youtubeApiKey);
+    },
+  },
   maxUploadMb: Number(env('MAX_UPLOAD_MB', '50')),
 };
 

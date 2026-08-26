@@ -234,8 +234,11 @@ CREATE TABLE IF NOT EXISTS monitored_articles (
   discovered_at TEXT NOT NULL,
   matched_keywords TEXT NOT NULL DEFAULT '[]',
   sentiment TEXT CHECK (sentiment IS NULL OR sentiment IN ('EXCELLENT','GOOD','BAD','NEUTRAL')),
+  sentiment_score REAL,
+  sentiment_auto INTEGER NOT NULL DEFAULT 0,
   sentiment_notes TEXT,
   read_status INTEGER NOT NULL DEFAULT 0,
+  platform TEXT NOT NULL DEFAULT 'RSS' CHECK (platform IN ('RSS','REDDIT','YOUTUBE')),
   UNIQUE (company_id, url)
 );
 
@@ -255,10 +258,25 @@ CREATE TABLE IF NOT EXISTS rss_feeds (
 // Create the schema as soon as the module loads so that other modules can
 // prepare statements at import time.
 db.exec(SCHEMA);
+migrate();
 
 export function initDatabase() {
   seedAdmin();
   forceAdminPassword();
+}
+
+/**
+ * Adds columns introduced after the initial release to databases created before them.
+ * `CREATE TABLE IF NOT EXISTS` above only affects brand-new databases, so existing
+ * ones (local or already deployed) need an explicit ALTER TABLE for each new column.
+ */
+function migrate() {
+  const columns = (db.prepare("PRAGMA table_info(monitored_articles)").all() as { name: string }[]).map((c) => c.name);
+  if (!columns.includes('sentiment_score')) db.exec('ALTER TABLE monitored_articles ADD COLUMN sentiment_score REAL');
+  if (!columns.includes('sentiment_auto')) db.exec('ALTER TABLE monitored_articles ADD COLUMN sentiment_auto INTEGER NOT NULL DEFAULT 0');
+  if (!columns.includes('platform')) {
+    db.exec(`ALTER TABLE monitored_articles ADD COLUMN platform TEXT NOT NULL DEFAULT 'RSS'`);
+  }
 }
 
 /** Recovery helper: ADMIN_FORCE_PASSWORD=true resets the ADMIN_EMAIL account to ADMIN_PASSWORD on boot. */

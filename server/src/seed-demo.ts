@@ -7,6 +7,7 @@
 import bcrypt from 'bcryptjs';
 import { db } from './db.js';
 import { uuid, nowIso, generatePublicKey, toJson, slugify } from './utils.js';
+import { analyzeSentiment } from './services/sentiment.js';
 
 export function seedDemoData(log: (msg: string) => void = console.log): boolean {
 const now = nowIso();
@@ -287,9 +288,13 @@ insertFeed.run(uuid(), C, 'Diario Libre - Portada', 'https://www.diariolibre.com
 insertFeed.run(uuid(), C, 'Listín Diario', 'https://listindiario.com/rss/portada', admin.id, daysAgo(12));
 
 const insertArticle = db.prepare(
-  `INSERT INTO monitored_articles (id, company_id, title, description, url, source, published_at, discovered_at, matched_keywords, sentiment, sentiment_notes, read_status)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  `INSERT INTO monitored_articles
+     (id, company_id, title, description, url, source, published_at, discovered_at, matched_keywords,
+      sentiment, sentiment_score, sentiment_auto, sentiment_notes, read_status, platform)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 );
+// Sentimiento explícito = calificado manualmente por un usuario (sentiment_auto = 0).
+// Sentimiento null = la noticia llega sin calificar y el análisis automático la completa al iniciar el servidor.
 const articles: [string, string, string, string[], string | null, string | null, number, number][] = [
   ['Institución de Ejemplo inicia la campaña Verano Seguro con operativos en playas', 'La institución desplegó brigadas informativas en los principales balnearios del país.', 'Diario Libre', ['Institución de Ejemplo', 'Verano Seguro'], 'EXCELLENT', 'Cobertura amplia y positiva, con fotos del operativo.', 1, 5],
   ['Conectividad Rural: comunidades de Elías Piña reciben internet por primera vez', 'El programa alcanza su primera meta con 40 comunidades conectadas.', 'Listín Diario', ['Conectividad Rural'], 'GOOD', null, 1, 4],
@@ -299,8 +304,32 @@ const articles: [string, string, string, string[], string | null, string | null,
   ['Anuncian segunda fase del programa Conectividad Rural para el norte', 'Incluirá Santiago, Puerto Plata y Montecristi.', 'La Información', ['Conectividad Rural'], null, null, 0, 0],
 ];
 articles.forEach((a, i) =>
-  insertArticle.run(uuid(), C, a[0], a[1], `https://www.${slugify(a[2]).replace(/-/g, '')}.com.do/${slugify(a[0]).slice(0, 60)}-${i}`, a[2], daysAgo(a[7], 8), daysAgo(a[7], 8, 30), toJson(a[3]), a[4], a[5], a[6])
+  insertArticle.run(
+    uuid(), C, a[0], a[1], `https://www.${slugify(a[2]).replace(/-/g, '')}.com.do/${slugify(a[0]).slice(0, 60)}-${i}`, a[2],
+    daysAgo(a[7], 8), daysAgo(a[7], 8, 30), toJson(a[3]), a[4], null, 0, a[5], a[6], 'RSS'
+  )
 );
+
+// Un par de menciones en redes sociales, como si ya se hubieran encontrado con "Buscar en Redes Sociales".
+const socialMentions: [string, string, string, string, string[], number][] = [
+  [
+    'Excelente iniciativa de Verano Seguro, felicito a la institución por el trabajo en las playas',
+    'REDDIT', 'https://www.reddit.com/r/republicadominicana/comments/demo-verano-seguro', 'Reddit r/republicadominicana',
+    ['Verano Seguro'], 2,
+  ],
+  [
+    'Resumen del programa Conectividad Rural: avances y próximos pasos',
+    'YOUTUBE', 'https://www.youtube.com/watch?v=demo-conectividad-rural', 'YouTube · Canal Ciudadano',
+    ['Conectividad Rural'], 1,
+  ],
+];
+socialMentions.forEach((m, i) => {
+  const sentiment = analyzeSentiment(m[0]);
+  insertArticle.run(
+    uuid(), C, m[0], null, m[2], m[3], daysAgo(m[5], 10 + i), daysAgo(m[5], 10 + i), toJson(m[4]),
+    sentiment.label, sentiment.score, 1, null, 0, m[1]
+  );
+});
 
 log(`Datos de demostración insertados para "${company.name}":`);
 log(`  usuarios: ${users.length} (contraseña "demo1234") · medios digitales: ${mediaList.length} · TV/Radio: ${trad.length}`);

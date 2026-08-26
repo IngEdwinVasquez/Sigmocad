@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAuth, scopeSql, companyForInsert } from '../auth.js';
 import { HttpError, uuid, nowIso, requireString, optionalString, oneOf, toInt, mapRow, mapRows, asyncHandler } from '../utils.js';
-import { fetchFeed, pollAllFeeds } from '../services/monitoring.js';
+import { fetchFeed, pollAllFeeds, pollSocialMentions, isRedditLikelyBlocked } from '../services/monitoring.js';
+import { config } from '../config.js';
 
 export const monitoringRouter = Router();
 monitoringRouter.use(requireAuth);
@@ -55,10 +56,19 @@ monitoringRouter.delete('/keywords/:id', (req, res) => {
 
 // ----- Articles -----------------------------------------------------------
 
+const ARTICLE_MAP = { bool: ['read_status', 'sentiment_auto'], json: ['matched_keywords'] };
+
 monitoringRouter.get('/articles', (req, res) => {
   const scope = scopeSql(req, 'company_id');
-  const rows = db.prepare(`SELECT * FROM monitored_articles WHERE ${scope.sql} ORDER BY discovered_at DESC LIMIT 2000`).all(...scope.params) as Record<string, unknown>[];
-  res.json(mapRows(rows, { bool: ['read_status'], json: ['matched_keywords'] }));
+  const params: unknown[] = [...scope.params];
+  let where = scope.sql;
+  const platform = optionalString(req.query.platform);
+  if (platform && platform !== 'ALL') {
+    where += ' AND platform = ?';
+    params.push(platform);
+  }
+  const rows = db.prepare(`SELECT * FROM monitored_articles WHERE ${where} ORDER BY discovered_at DESC LIMIT 2000`).all(...params) as Record<string, unknown>[];
+  res.json(mapRows(rows, ARTICLE_MAP));
 });
 
 monitoringRouter.patch('/articles/:id', (req, res) => {
@@ -67,13 +77,16 @@ monitoringRouter.patch('/articles/:id', (req, res) => {
   if (!existing) throw new HttpError(404, 'Artículo no encontrado');
   const b = req.body || {};
   const sentiment = b.sentiment === undefined ? existing.sentiment : b.sentiment ? oneOf(b.sentiment, SENTIMENTS, 'sentiment') : null;
-  db.prepare('UPDATE monitored_articles SET sentiment = ?, sentiment_notes = ?, read_status = ? WHERE id = ?').run(
+  // A human explicitly setting the sentiment overrides the automatic classification.
+  const sentimentAuto = b.sentiment === undefined ? existing.sentiment_auto : 0;
+  db.prepare('UPDATE monitored_articles SET sentiment = ?, sentiment_auto = ?, sentiment_notes = ?, read_status = ? WHERE id = ?').run(
     sentiment,
+    sentimentAuto,
     b.sentiment_notes === undefined ? existing.sentiment_notes : optionalString(b.sentiment_notes),
     b.read_status === undefined ? existing.read_status : toInt(b.read_status),
     existing.id
   );
-  res.json(mapRow(db.prepare('SELECT * FROM monitored_articles WHERE id = ?').get(existing.id) as Record<string, unknown>, { bool: ['read_status'], json: ['matched_keywords'] }));
+  res.json(mapRow(db.prepare('SELECT * FROM monitored_articles WHERE id = ?').get(existing.id) as Record<string, unknown>, ARTICLE_MAP));
 });
 
 monitoringRouter.delete('/articles/:id', (req, res) => {
@@ -149,5 +162,26 @@ monitoringRouter.post(
   asyncHandler(async (req, res) => {
     if (req.user!.role === 'USER') throw new HttpError(403, 'No tiene permisos para esta acción');
     res.json(await pollAllFeeds());
+  })
+);
+
+// ----- Redes sociales -------------------------------------------------------
+
+monitoringRouter.get('/social/status', (_req, res) => {
+  res.json({ reddit: config.social.redditEnabled, youtube: config.social.youtubeEnabled, redditBlocked: isRedditLikelyBlocked() });
+});
+
+/** Search Reddit (and YouTube, if configured) right now for the active company's keywords. */
+monitoringRouter.post(
+  '/social/fetch',
+  asyncHandler(async (req, res) => {
+    if (!config.social.redditEnabled && !config.social.youtubeEnabled) {
+      throw new HttpError(400, 'El monitoreo de redes sociales no está habilitado en este servidor');
+    }
+    const companyId = requireCompany(req);
+    const hasKeywords = db.prepare('SELECT 1 FROM monitoring_keywords WHERE is_active = 1 AND company_id = ?').get(companyId);
+    if (!hasKeywords) throw new HttpError(400, 'Agregue al menos una palabra clave activa antes de buscar en redes sociales');
+    const result = await pollSocialMentions(companyId);
+    res.json({ ...result, redditBlocked: isRedditLikelyBlocked() });
   })
 );
