@@ -62,7 +62,7 @@ export function Slots() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const slotData: any = {
+    const slotData: Record<string, unknown> = {
       media_id: formData.media_id,
       width: formData.width ? parseInt(formData.width) : null,
       height: formData.height ? parseInt(formData.height) : null,
@@ -111,7 +111,7 @@ export function Slots() {
         const mediaName = String(row.media_name || row.media || '').toLowerCase();
         const mediaId = mediaMap.get(mediaName) || '';
 
-        const slotData: any = {
+        const slotData: Record<string, unknown> = {
           media_id: mediaId,
           width: row.width ? Number(row.width) : null,
           height: row.height ? Number(row.height) : null,

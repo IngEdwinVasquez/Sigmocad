@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api, errorMessage } from '../lib/api';
+import { api, errorMessage, getPublicConfig } from '../lib/api';
 import { useCompany } from '../lib/use-company';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -7,7 +7,16 @@ import { Modal } from '../components/ui/Modal';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import {
   Plus, Search, Tag, TrendingUp, ThumbsUp, ThumbsDown, AlertCircle, X, ExternalLink, Eye, EyeOff, Rss, RefreshCw, Trash2,
+  Share2, MessageCircle, Youtube, Sparkles, User,
 } from 'lucide-react';
+
+type Platform = 'RSS' | 'REDDIT' | 'YOUTUBE';
+
+const PLATFORM_META: Record<Platform, { label: string; icon: typeof Rss; color: string }> = {
+  RSS: { label: 'RSS', icon: Rss, color: 'text-orange-600' },
+  REDDIT: { label: 'Reddit', icon: MessageCircle, color: 'text-orange-500' },
+  YOUTUBE: { label: 'YouTube', icon: Youtube, color: 'text-red-600' },
+};
 
 interface Keyword {
   id: string;
@@ -36,8 +45,11 @@ interface MonitoredArticle {
   discovered_at: string;
   matched_keywords: string[];
   sentiment: 'EXCELLENT' | 'GOOD' | 'BAD' | 'NEUTRAL' | null;
+  sentiment_score: number | null;
+  sentiment_auto: boolean;
   sentiment_notes: string | null;
   read_status: boolean;
+  platform: Platform;
 }
 
 export function MediaMonitoring() {
@@ -51,6 +63,9 @@ export function MediaMonitoring() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sentimentFilter, setSentimentFilter] = useState<string>('ALL');
   const [readFilter, setReadFilter] = useState<string>('ALL');
+  const [platformFilter, setPlatformFilter] = useState<string>('ALL');
+  const [socialConfig, setSocialConfig] = useState({ reddit: false, youtube: false });
+  const [searchingSocial, setSearchingSocial] = useState(false);
 
   const [isKeywordModalOpen, setIsKeywordModalOpen] = useState(false);
   const [isFeedModalOpen, setIsFeedModalOpen] = useState(false);
@@ -67,6 +82,12 @@ export function MediaMonitoring() {
   const [activeTab, setActiveTab] = useState<'articles' | 'keywords' | 'feeds'>('articles');
 
   useEffect(() => {
+    getPublicConfig()
+      .then((cfg) => setSocialConfig(cfg.socialMonitoring))
+      .catch(() => setSocialConfig({ reddit: false, youtube: false }));
+  }, []);
+
+  useEffect(() => {
     if (companyId) {
       fetchKeywords();
       fetchFeeds();
@@ -80,7 +101,7 @@ export function MediaMonitoring() {
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [articles, searchTerm, sentimentFilter, readFilter]);
+  }, [articles, searchTerm, sentimentFilter, readFilter, platformFilter]);
 
   const fetchKeywords = async () => {
     try {
@@ -137,6 +158,10 @@ export function MediaMonitoring() {
       filtered = filtered.filter((article) => article.read_status);
     } else if (readFilter === 'UNREAD') {
       filtered = filtered.filter((article) => !article.read_status);
+    }
+
+    if (platformFilter !== 'ALL') {
+      filtered = filtered.filter((article) => article.platform === platformFilter);
     }
 
     setFilteredArticles(filtered);
@@ -203,6 +228,28 @@ export function MediaMonitoring() {
       fetchFeeds();
     } catch (error) {
       console.error('Error deleting feed:', error);
+    }
+  };
+
+  const handleSearchSocial = async () => {
+    setSearchingSocial(true);
+    try {
+      const result = await api.post<{ reddit: number; youtube: number; redditBlocked: boolean }>('/api/monitoring/social/fetch');
+      const parts = [];
+      if (socialConfig.reddit) parts.push(`Reddit: ${result.reddit} nuevas`);
+      if (socialConfig.youtube) parts.push(`YouTube: ${result.youtube} nuevas`);
+      if (result.redditBlocked) {
+        parts.push(
+          '\nNota: Reddit está bloqueando las búsquedas desde este servidor (protección anti-bots). ' +
+            'Esto es una limitación de Reddit, no un error de configuración; considere RSS.app para esa red.'
+        );
+      }
+      alert(`Búsqueda completada.\n${parts.join('\n')}`);
+      fetchArticles();
+    } catch (error) {
+      alert(errorMessage(error, 'Error al buscar en redes sociales'));
+    } finally {
+      setSearchingSocial(false);
     }
   };
 
@@ -331,9 +378,15 @@ export function MediaMonitoring() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Monitoreo de Medios</h1>
-          <p className="text-gray-600 mt-1">Seguimiento de noticias por palabras clave desde fuentes RSS</p>
+          <p className="text-gray-600 mt-1">Noticias, sentimiento y redes sociales por palabra clave</p>
         </div>
         <div className="flex gap-2">
+          {(socialConfig.reddit || socialConfig.youtube) && (
+            <Button variant="secondary" onClick={handleSearchSocial} disabled={searchingSocial}>
+              <Share2 className={`w-4 h-4 mr-2 ${searchingSocial ? 'animate-pulse' : ''}`} />
+              {searchingSocial ? 'Buscando...' : 'Buscar en Redes Sociales'}
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => setIsFeedModalOpen(true)}>
             <Rss className="w-4 h-4 mr-2" />
             Agregar Fuente RSS
@@ -344,6 +397,14 @@ export function MediaMonitoring() {
           </Button>
         </div>
       </div>
+
+      {!socialConfig.reddit && !socialConfig.youtube && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6 text-sm text-blue-800">
+          El monitoreo de redes sociales (Reddit/YouTube) está deshabilitado en este servidor. También puede agregar cualquier feed de{' '}
+          <a href="https://rss.app" target="_blank" rel="noopener noreferrer" className="underline font-medium">RSS.app</a>
+          {' '}(Twitter/X, Instagram, Facebook, TikTok) como una Fuente RSS normal.
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -426,6 +487,21 @@ export function MediaMonitoring() {
               </select>
             </div>
 
+            <div className="mb-6 flex items-center gap-2">
+              <span className="text-xs font-medium text-gray-500">Plataforma:</span>
+              {(['ALL', 'RSS', 'REDDIT', 'YOUTUBE'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPlatformFilter(p)}
+                  className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full border ${
+                    platformFilter === p ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {p === 'ALL' ? 'Todas' : PLATFORM_META[p].label}
+                </button>
+              ))}
+            </div>
+
             <div className="space-y-4">
               {filteredArticles.map((article) => (
                 <div
@@ -439,7 +515,18 @@ export function MediaMonitoring() {
                       <div className="flex items-start gap-3 mb-2">
                         <div className="mt-1">{getSentimentIcon(article.sentiment)}</div>
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">{article.title}</h3>
+                          <div className="flex items-center gap-2 mb-1">
+                            {(() => {
+                              const meta = PLATFORM_META[article.platform] || PLATFORM_META.RSS;
+                              const PlatformIcon = meta.icon;
+                              return (
+                                <span className={`inline-flex items-center gap-1 text-xs font-medium ${meta.color}`}>
+                                  <PlatformIcon className="w-3.5 h-3.5" /> {meta.label}
+                                </span>
+                              );
+                            })()}
+                            <h3 className="text-lg font-semibold text-gray-900">{article.title}</h3>
+                          </div>
                           {article.description && <p className="text-sm text-gray-600 mb-2">{article.description}</p>}
                           <div className="flex items-center gap-4 text-xs text-gray-500">
                             <span className="font-medium">{article.source}</span>
@@ -469,10 +556,16 @@ export function MediaMonitoring() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 items-end">
                       <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${getSentimentBadge(article.sentiment)}`}>
                         {getSentimentLabel(article.sentiment)}
                       </span>
+                      {article.sentiment && (
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-400" title={article.sentiment_auto ? `Puntuación: ${article.sentiment_score ?? 0}` : 'Calificado manualmente'}>
+                          {article.sentiment_auto ? <Sparkles className="w-3 h-3" /> : <User className="w-3 h-3" />}
+                          {article.sentiment_auto ? 'Automático' : 'Manual'}
+                        </span>
+                      )}
                       <Button variant="secondary" size="sm" onClick={() => handleOpenSentimentModal(article)}>
                         Calificar
                       </Button>
@@ -550,8 +643,12 @@ export function MediaMonitoring() {
         {activeTab === 'feeds' && (
           <div className="p-6">
             <p className="text-sm text-gray-600 mb-4">
-              El servidor consulta periódicamente estas fuentes RSS y guarda las noticias que coincidan con las palabras clave activas.
-              También puede recibir artículos desde servicios externos mediante el webhook <code className="bg-gray-100 px-1 rounded">POST /api/rss-webhook</code>.
+              El servidor consulta periódicamente estas fuentes RSS y guarda las noticias que coincidan con las palabras clave activas,
+              calculando su sentimiento automáticamente. También puede recibir artículos desde servicios externos mediante el webhook{' '}
+              <code className="bg-gray-100 px-1 rounded">POST /api/rss-webhook</code>. Para monitorear Twitter/X, Instagram, Facebook o TikTok,
+              genere un feed en{' '}
+              <a href="https://rss.app" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">RSS.app</a>
+              {' '}y agregue esa URL aquí como una fuente más.
             </p>
             <Table>
               <TableHeader>

@@ -132,7 +132,34 @@ Toda la información vive en dos carpetas: `server/data/` (base de datos SQLite)
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Envío de correos a medios | (deshabilitado) |
 | `RSS_POLL_MINUTES` | Intervalo de sondeo RSS (0 = apagado) | `15` |
 | `RSS_WEBHOOK_SECRET` | Secreto del webhook `/api/rss-webhook` | (sin secreto) |
+| `SOCIAL_REDDIT_ENABLED` | Búsqueda automática en Reddit por palabra clave | `true` |
+| `YOUTUBE_API_KEY` | Clave de la API de datos de YouTube (capa gratuita); vacío = deshabilitado | (vacío) |
+| `SOCIAL_POLL_MINUTES` | Intervalo de sondeo de redes sociales | `60` |
 | `GEO_LOOKUP` | Geolocalizar IPs con ip-api.com | `true` |
+
+## Monitoreo de medios: noticias, sentimiento y redes sociales
+
+El módulo **Monitoreo de Medios** rastrea un tema (definido por palabras clave por empresa) en tres frentes:
+
+1. **Noticias (RSS)** — fuentes RSS propias + webhook externo `POST /api/rss-webhook`, como antes.
+2. **Sentimiento automático** — cada noticia o mención se clasifica como Excelente/Buena/Mala/Neutral con un
+   analizador léxico en español ([server/src/services/sentiment.ts](server/src/services/sentiment.ts)), sin
+   servicios externos. Es heurístico, no un modelo de lenguaje: útil para ver tendencia general, no para
+   matices finos. Un usuario puede recalificar cualquier mención manualmente; queda marcada como "Manual" en
+   vez de "Automático" y ya no se sobrescribe.
+3. **Redes sociales** — usa las mismas palabras clave activas, sin configuración adicional:
+   - **Reddit**: búsqueda pública, sin clave. **Reddit bloquea con frecuencia (403) las peticiones desde IPs
+     de servidor/datacenter** (protección anti-bots) — funciona de forma oportunista, no garantizada; la app
+     lo detecta y lo indica en pantalla en vez de fallar en silencio.
+   - **YouTube**: requiere `YOUTUBE_API_KEY` (API oficial de Google, capa gratuita ~10,000 unidades/día).
+   - **Twitter/X, Instagram, Facebook, TikTok**: sin acceso gratuito a búsqueda por palabra clave desde 2023.
+     La alternativa práctica es generar un feed en [RSS.app](https://rss.app) (de pago) para el perfil o
+     búsqueda que interese, y agregar esa URL en **Fuentes RSS** como una fuente más — se integra sin cambios
+     de código porque ya es un feed RSS estándar.
+
+El botón **Buscar en Redes Sociales** ejecuta una búsqueda inmediata; además el servidor sondea automáticamente
+cada `SOCIAL_POLL_MINUTES`. Los resultados de RSS, Reddit y YouTube comparten la misma lista y se pueden
+filtrar por plataforma.
 
 ## Usuarios, roles y empresas
 
